@@ -155,6 +155,17 @@
             color: #155724;
         }
         
+        .period-info {
+            font-size: 12px;
+            color: #555;
+            margin-bottom: 1rem;
+            padding: 10px 12px;
+            background: #f0f7ff;
+            border: 1px solid #d0e3ff;
+            border-radius: 8px;
+            line-height: 1.5;
+        }
+        
         .category-item {
             display: flex;
             gap: 8px;
@@ -277,6 +288,23 @@
             margin: 2px 0 0 0;
         }
         
+        .expense-date-input {
+            font-size: 11px;
+            color: #666;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 3px 6px;
+            margin: 4px 0 0 0;
+            width: 100px;
+            background: #fff;
+        }
+        
+        .expense-date-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+        }
+        
         .expense-amount {
             font-size: 13px;
             font-weight: 500;
@@ -300,6 +328,10 @@
             <h2>예산 설정</h2>
             <label>총 가용 예산 (원)</label>
             <input type="number" id="totalBudget" placeholder="예: 1000000">
+            
+            <label>지출 내역 초기화 기준일</label>
+            <select id="resetDay" onchange="updateResetDay(this.value)"></select>
+            <p style="font-size: 12px; color: #888; margin: -6px 0 12px 0;">매월 선택한 날짜에 지출 내역이 자동으로 초기화됩니다. (해당 날짜가 없는 달은 말일 기준)</p>
             
             <div style="background: #f5f5f5; border-radius: 8px; padding: 1rem; margin-top: 1rem;">
                 <h3>항목별 예산 한도</h3>
@@ -326,6 +358,8 @@
         
         <div class="card">
             <h2>예산 현황</h2>
+            
+            <p id="periodInfo" class="period-info"></p>
             
             <div class="stats-grid">
                 <div class="stat-box">
@@ -356,21 +390,135 @@
         let budgetData = {
             totalBudget: 0,
             categories: {},
-            expenses: []
+            expenses: [],
+            resetDay: 1,        // 매월 지출 내역이 초기화되는 기준일 (1~31)
+            periodStart: null   // 현재 예산 주기가 시작된 시점(ISO 문자열)
         };
 
         function initializeFromLocalStorage() {
             const saved = localStorage.getItem('budgetData');
             if (saved) {
                 budgetData = JSON.parse(saved);
-                renderCategories();
-                updateExpenseCategorySelect();
-                render();
             }
+            // 저장된 데이터를 불러온 뒤, 초기화 기준일이 지났는지 확인하고 필요하면 초기화
+            checkAndResetMonthly();
+            renderResetDaySelect();
+            renderCategories();
+            updateExpenseCategorySelect();
+            render();
         }
 
         function saveToLocalStorage() {
             localStorage.setItem('budgetData', JSON.stringify(budgetData));
+        }
+
+        // ===== 월간 자동 초기화 =====
+        // 매월 사용자가 지정한 '초기화 기준일'에 지출 내역(expenses)을 비웁니다.
+
+        // now 기준으로 가장 최근에 지나온 초기화 기준일(자정)을 반환
+        function getMostRecentResetBoundary(now, resetDay) {
+            const clampDay = (y, m, day) => {
+                const daysInMonth = new Date(y, m + 1, 0).getDate();
+                return Math.min(day, daysInMonth); // 해당 달에 없는 날짜면 말일로 보정
+            };
+            const y = now.getFullYear();
+            const m = now.getMonth();
+            const thisBoundary = new Date(y, m, clampDay(y, m, resetDay), 0, 0, 0, 0);
+            if (now >= thisBoundary) {
+                return thisBoundary;
+            }
+            // 아직 이번 달 기준일 전이면 지난달 기준일이 최근 경계
+            const pm = m - 1;
+            const py = pm < 0 ? y - 1 : y;
+            const pmi = (pm + 12) % 12;
+            return new Date(py, pmi, clampDay(py, pmi, resetDay), 0, 0, 0, 0);
+        }
+
+        // 다음 초기화 예정일 반환 (현재 주기 시작일 기준 다음 달 기준일)
+        function getNextResetDate() {
+            const resetDay = budgetData.resetDay || 1;
+            const start = budgetData.periodStart
+                ? new Date(budgetData.periodStart)
+                : getMostRecentResetBoundary(new Date(), resetDay);
+            const y = start.getFullYear();
+            const nextMonth = start.getMonth() + 1;
+            const daysInNextMonth = new Date(y, nextMonth + 1, 0).getDate();
+            const day = Math.min(resetDay, daysInNextMonth);
+            return new Date(y, nextMonth, day, 0, 0, 0, 0);
+        }
+
+        function checkAndResetMonthly() {
+            const now = new Date();
+
+            // 최초 실행 또는 기존 버전 데이터: 기준일 기본값 설정 후 이번 로드에서는 초기화하지 않음
+            if (!budgetData.resetDay) {
+                budgetData.resetDay = 1;
+                budgetData.periodStart = getMostRecentResetBoundary(now, budgetData.resetDay).toISOString();
+                saveToLocalStorage();
+                return;
+            }
+
+            const boundary = getMostRecentResetBoundary(now, budgetData.resetDay);
+
+            if (!budgetData.periodStart) {
+                budgetData.periodStart = boundary.toISOString();
+                saveToLocalStorage();
+                return;
+            }
+
+            // 마지막 주기 시작일 이후로 새 기준일을 지났다면 초기화
+            if (boundary > new Date(budgetData.periodStart)) {
+                budgetData.expenses = [];   // 지출 내역만 초기화 (예산/카테고리 설정은 유지)
+                budgetData.periodStart = boundary.toISOString();
+                saveToLocalStorage();
+            }
+        }
+
+        // 초기화 기준일 드롭다운(매월 1~31일) 채우기 및 현재 값 반영
+        function renderResetDaySelect() {
+            const select = document.getElementById('resetDay');
+            if (select.options.length === 0) {
+                for (let d = 1; d <= 31; d++) {
+                    const opt = document.createElement('option');
+                    opt.value = d;
+                    opt.textContent = `매월 ${d}일`;
+                    select.appendChild(opt);
+                }
+            }
+            select.value = budgetData.resetDay || 1;
+        }
+
+        // 사용자가 초기화 기준일을 변경했을 때
+        function updateResetDay(value) {
+            let day = parseInt(value);
+            if (isNaN(day)) day = 1;
+            day = Math.max(1, Math.min(31, day));
+            budgetData.resetDay = day;
+            // 기준일 변경 시 현재 주기 시작점을 새 기준일에 맞춰 재설정 (기존 지출 내역은 유지)
+            budgetData.periodStart = getMostRecentResetBoundary(new Date(), day).toISOString();
+            saveToLocalStorage();
+            render();
+        }
+
+        // ===== 날짜 표시(YY.MM.DD) 헬퍼 =====
+        function formatShortDate(d) {
+            const yy = String(d.getFullYear()).slice(-2);
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${yy}.${mm}.${dd}`;
+        }
+
+        // 다양한 형태의 날짜 문자열을 YY.MM.DD로 정규화 (기존 데이터 호환)
+        function normalizeToShortDate(value) {
+            const s = String(value || '').trim();
+            const m = s.match(/(\d{2,4})\D+(\d{1,2})\D+(\d{1,2})/);
+            if (m) {
+                const yy = m[1].length >= 4 ? m[1].slice(-2) : m[1].padStart(2, '0');
+                const mm = String(parseInt(m[2], 10)).padStart(2, '0');
+                const dd = String(parseInt(m[3], 10)).padStart(2, '0');
+                return `${yy}.${mm}.${dd}`;
+            }
+            return s;
         }
 
         function addCategory() {
@@ -436,6 +584,9 @@
         }
 
         function addExpense() {
+            // 지출을 추가하기 전에 한 달이 지났는지 먼저 확인 (앱을 켜둔 채 월이 바뀐 경우 대비)
+            checkAndResetMonthly();
+
             const categoryId = document.getElementById('expenseCategory').value;
             const amount = parseInt(document.getElementById('expenseAmount').value);
             const note = document.getElementById('expenseNote').value;
@@ -455,7 +606,7 @@
                 categoryId: categoryId,
                 amount: amount,
                 note: note,
-                date: new Date().toLocaleString('ko-KR')
+                date: formatShortDate(new Date())   // YY.MM.DD 형식으로 자동 기입
             });
 
             document.getElementById('expenseAmount').value = '';
@@ -468,6 +619,22 @@
 
         function deleteExpense(expenseId) {
             budgetData.expenses = budgetData.expenses.filter(e => e.id !== expenseId);
+            saveToLocalStorage();
+            render();
+        }
+
+        // 지출 항목의 날짜를 사용자가 직접 수정
+        function updateExpenseDate(expenseId, value) {
+            const expense = budgetData.expenses.find(e => e.id === expenseId);
+            if (!expense) return;
+            const normalized = normalizeToShortDate(value);
+            const m = normalized.match(/^(\d{2})\.(\d{2})\.(\d{2})$/);
+            if (!m || +m[2] < 1 || +m[2] > 12 || +m[3] < 1 || +m[3] > 31) {
+                alert('날짜를 YY.MM.DD 형식으로 입력해주세요 (예: ' + formatShortDate(new Date()) + ')');
+                render(); // 잘못된 입력이면 원래 값으로 되돌림
+                return;
+            }
+            expense.date = normalized;
             saveToLocalStorage();
             render();
         }
@@ -489,7 +656,23 @@
             return budgetData.expenses.reduce((sum, e) => sum + e.amount, 0);
         }
 
+        // 예산 주기 정보를 화면에 표시
+        function renderPeriodInfo() {
+            const periodInfo = document.getElementById('periodInfo');
+            if (!budgetData.periodStart) {
+                periodInfo.textContent = '';
+                return;
+            }
+            const start = new Date(budgetData.periodStart);
+            const next = getNextResetDate();
+            const fmt = (d) => `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+            periodInfo.textContent =
+                `📅 이번 예산 주기: ${fmt(start)} ~ ${fmt(next)} · ${fmt(next)}에 지출 내역이 자동으로 초기화됩니다`;
+        }
+
         function render() {
+            renderPeriodInfo();
+
             document.getElementById('totalBudget').value = budgetData.totalBudget || '';
             document.getElementById('totalBudgetDisplay').textContent = 
                 budgetData.totalBudget.toLocaleString('ko-KR') + '원';
@@ -550,7 +733,7 @@
                         <div class="expense-info">
                             <p class="expense-category">${category.name}</p>
                             <p class="expense-note">${expense.note || '-'}</p>
-                            <p class="expense-date">${expense.date}</p>
+                            <input type="text" class="expense-date-input" value="${normalizeToShortDate(expense.date)}" onchange="updateExpenseDate('${expense.id}', this.value)" placeholder="YY.MM.DD">
                         </div>
                         <div class="expense-amount">${expense.amount.toLocaleString('ko-KR')}원</div>
                         <button class="danger" onclick="deleteExpense('${expense.id}')">삭제</button>
