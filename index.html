@@ -188,6 +188,96 @@
             border-radius: 8px;
             border: 1px solid #e0e0e0;
             margin-bottom: 10px;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        
+        .category-breakdown:hover {
+            background: #eef3f8;
+            border-color: #cdd7e2;
+        }
+        
+        .category-breakdown:active {
+            background: #e4ebf2;
+        }
+        
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            padding: 1rem;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        
+        .modal-overlay.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: #fff;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            margin-top: 6vh;
+            padding: 1.25rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+        }
+        
+        .modal-close {
+            width: auto;
+            margin: 0;
+            padding: 4px 10px;
+            background: transparent;
+            border: none;
+            color: #999;
+            font-size: 20px;
+            line-height: 1;
+        }
+        
+        .modal-close:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .modal-summary {
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 1rem;
+            font-size: 13px;
+            color: #555;
+            line-height: 1.8;
+        }
+        
+        .modal-expense-item {
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
         }
         
         .category-header {
@@ -377,12 +467,25 @@
             </div>
             
             <h3>항목별 현황</h3>
+            <p style="font-size: 12px; color: #888; margin: -6px 0 12px 0;">항목을 탭하면 해당 항목의 지출 내역을 볼 수 있어요.</p>
             <div id="categoryBreakdown"></div>
         </div>
         
         <div class="card">
             <h2>지출 내역</h2>
             <div id="expenseList"></div>
+        </div>
+    </div>
+
+    <!-- 항목별 지출 내역 팝업 -->
+    <div id="categoryModal" class="modal-overlay" onclick="handleModalOverlayClick(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalCategoryName"></h2>
+                <button class="modal-close" onclick="closeCategoryModal()">✕</button>
+            </div>
+            <div id="modalSummary" class="modal-summary"></div>
+            <div id="modalExpenseList"></div>
         </div>
     </div>
 
@@ -639,6 +742,58 @@
             render();
         }
 
+        // ===== 항목별 지출 내역 팝업 =====
+        function openCategoryModal(categoryId) {
+            const category = budgetData.categories[categoryId];
+            if (!category) return;
+
+            const spent = getCategoryExpenses(categoryId);
+            const limit = category.limit || 0;
+            const remaining = limit - spent;
+
+            document.getElementById('modalCategoryName').textContent = category.name;
+
+            document.getElementById('modalSummary').innerHTML = `
+                지출: ${spent.toLocaleString('ko-KR')}원<br>
+                한도: ${limit.toLocaleString('ko-KR')}원<br>
+                남은액: <span style="color: ${remaining < 0 ? '#dc3545' : '#28a745'}; font-weight: 500;">${remaining.toLocaleString('ko-KR')}원</span>
+            `;
+
+            const list = document.getElementById('modalExpenseList');
+            const items = budgetData.expenses.filter(e => e.categoryId === categoryId);
+
+            if (items.length === 0) {
+                list.innerHTML = '<p class="empty-message">이 항목의 지출 내역이 없습니다</p>';
+            } else {
+                list.innerHTML = '';
+                items.slice().reverse().forEach(expense => {
+                    const div = document.createElement('div');
+                    div.className = 'modal-expense-item';
+                    div.innerHTML = `
+                        <div class="expense-info">
+                            <p class="expense-note">${expense.note || '-'}</p>
+                            <p class="expense-date">${normalizeToShortDate(expense.date)}</p>
+                        </div>
+                        <div class="expense-amount">${expense.amount.toLocaleString('ko-KR')}원</div>
+                    `;
+                    list.appendChild(div);
+                });
+            }
+
+            document.getElementById('categoryModal').classList.add('show');
+        }
+
+        function closeCategoryModal() {
+            document.getElementById('categoryModal').classList.remove('show');
+        }
+
+        // 팝업 바깥(어두운 영역)을 클릭하면 닫기
+        function handleModalOverlayClick(event) {
+            if (event.target.id === 'categoryModal') {
+                closeCategoryModal();
+            }
+        }
+
         function updateTotalBudget() {
             const value = parseInt(document.getElementById('totalBudget').value) || 0;
             budgetData.totalBudget = value;
@@ -698,6 +853,7 @@
                 
                 const div = document.createElement('div');
                 div.className = 'category-breakdown';
+                div.onclick = () => openCategoryModal(id);
                 
                 div.innerHTML = `
                     <div class="category-header">
@@ -744,6 +900,11 @@
         }
 
         document.getElementById('totalBudget').addEventListener('change', updateTotalBudget);
+
+        // ESC 키로 팝업 닫기
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeCategoryModal();
+        });
 
         initializeFromLocalStorage();
         render();
