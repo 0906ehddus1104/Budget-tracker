@@ -408,6 +408,156 @@
             text-align: center;
             padding: 20px;
         }
+
+        /* ===== 지난 기록(월별/기간별) ===== */
+        .history-item {
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .history-item:hover {
+            background: #eef3f8;
+            border-color: #cdd7e2;
+        }
+
+        .history-item .history-period {
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .history-item .history-total {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .history-category-row {
+            padding: 10px 12px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+
+        .history-category-row:hover {
+            background: #eef3f8;
+        }
+
+        .history-category-row .row-top {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .history-category-expenses {
+            display: none;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed #ddd;
+        }
+
+        .history-category-expenses.show {
+            display: block;
+        }
+
+        .history-category-expenses .modal-expense-item {
+            margin-bottom: 6px;
+        }
+
+        /* ===== 캘린더 ===== */
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .calendar-nav button {
+            width: auto;
+            margin: 0;
+            padding: 6px 14px;
+            background: transparent;
+            border: 1px solid #ddd;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .calendar-nav button:hover {
+            background: #f5f5f5;
+        }
+
+        .calendar-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+
+        .calendar-dow {
+            text-align: center;
+            font-size: 11px;
+            color: #999;
+            padding-bottom: 6px;
+        }
+
+        .calendar-cell {
+            min-height: 52px;
+            border-radius: 6px;
+            border: 1px solid #e8e8e8;
+            padding: 4px;
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .calendar-cell.empty {
+            border: none;
+        }
+
+        .calendar-cell.has-expense {
+            background: #f0f7ff;
+            border-color: #d0e3ff;
+            cursor: pointer;
+        }
+
+        .calendar-cell.has-expense:hover {
+            background: #e2eeff;
+        }
+
+        .calendar-cell.today {
+            border-color: #007bff;
+            border-width: 2px;
+        }
+
+        .calendar-day-num {
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .calendar-day-amount {
+            color: #007bff;
+            font-weight: 500;
+            font-size: 10.5px;
+            line-height: 1.3;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
@@ -475,6 +625,23 @@
             <h2>지출 내역</h2>
             <div id="expenseList"></div>
         </div>
+
+        <div class="card">
+            <h2>📅 캘린더</h2>
+            <p style="font-size: 12px; color: #888; margin: -6px 0 12px 0;">날짜를 탭하면 해당 날짜의 지출 내역을 볼 수 있어요.</p>
+            <div class="calendar-nav">
+                <button onclick="changeCalendarMonth(-1)">◀ 이전달</button>
+                <span class="calendar-title" id="calendarTitle"></span>
+                <button onclick="changeCalendarMonth(1)">다음달 ▶</button>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+
+        <div class="card">
+            <h2>🗂️ 지난 기록</h2>
+            <p style="font-size: 12px; color: #888; margin: -6px 0 12px 0;">지출 내역이 초기화될 때마다 이전 기간의 기록이 자동으로 저장돼요. 탭하면 상세 내역을 볼 수 있어요.</p>
+            <div id="historyList"></div>
+        </div>
     </div>
 
     <!-- 항목별 지출 내역 팝업 -->
@@ -489,19 +656,54 @@
         </div>
     </div>
 
+    <!-- 지난 기록 상세 팝업 -->
+    <div id="historyModal" class="modal-overlay" onclick="handleHistoryModalOverlayClick(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="historyModalTitle"></h2>
+                <button class="modal-close" onclick="closeHistoryModal()">✕</button>
+            </div>
+            <div id="historyModalSummary" class="modal-summary"></div>
+            <h3>카테고리별 사용금액</h3>
+            <p style="font-size: 12px; color: #888; margin: -6px 0 12px 0;">항목을 탭하면 해당 항목의 지출 내역을 볼 수 있어요.</p>
+            <div id="historyCategoryBreakdown"></div>
+        </div>
+    </div>
+
+    <!-- 캘린더 날짜별 지출 내역 팝업 -->
+    <div id="dayModal" class="modal-overlay" onclick="handleDayModalOverlayClick(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="dayModalTitle"></h2>
+                <button class="modal-close" onclick="closeDayModal()">✕</button>
+            </div>
+            <div id="dayModalSummary" class="modal-summary"></div>
+            <div id="dayModalExpenseList"></div>
+        </div>
+    </div>
+
     <script>
         let budgetData = {
             totalBudget: 0,
             categories: {},
             expenses: [],
             resetDay: 1,        // 매월 지출 내역이 초기화되는 기준일 (1~31)
-            periodStart: null   // 현재 예산 주기가 시작된 시점(ISO 문자열)
+            periodStart: null,  // 현재 예산 주기가 시작된 시점(ISO 문자열)
+            history: []         // 지난 기간(월별) 기록 스냅샷 목록
         };
+
+        // 캘린더에서 현재 보고 있는 월(연/월)
+        let calendarViewYear = new Date().getFullYear();
+        let calendarViewMonth = new Date().getMonth(); // 0-indexed
 
         function initializeFromLocalStorage() {
             const saved = localStorage.getItem('budgetData');
             if (saved) {
                 budgetData = JSON.parse(saved);
+            }
+            // 기존 버전 데이터 호환: history 필드가 없으면 추가
+            if (!budgetData.history) {
+                budgetData.history = [];
             }
             // 저장된 데이터를 불러온 뒤, 초기화 기준일이 지났는지 확인하고 필요하면 초기화
             checkAndResetMonthly();
@@ -571,6 +773,18 @@
 
             // 마지막 주기 시작일 이후로 새 기준일을 지났다면 초기화
             if (boundary > new Date(budgetData.periodStart)) {
+                // 초기화하기 전에 지금까지의 기간 데이터를 history에 스냅샷으로 저장
+                if (budgetData.expenses.length > 0 || Object.keys(budgetData.categories).length > 0) {
+                    budgetData.history = budgetData.history || [];
+                    budgetData.history.unshift({
+                        id: Date.now().toString(),
+                        periodStart: budgetData.periodStart,
+                        periodEnd: boundary.toISOString(),
+                        totalBudget: budgetData.totalBudget,
+                        categories: JSON.parse(JSON.stringify(budgetData.categories)), // 당시 카테고리/한도 스냅샷
+                        expenses: budgetData.expenses                                  // 당시 지출 내역 전체
+                    });
+                }
                 budgetData.expenses = [];   // 지출 내역만 초기화 (예산/카테고리 설정은 유지)
                 budgetData.periodStart = boundary.toISOString();
                 saveToLocalStorage();
@@ -622,6 +836,18 @@
                 return `${yy}.${mm}.${dd}`;
             }
             return s;
+        }
+
+        // YY.MM.DD 문자열을 {year, month(1-12), day} 객체로 변환 (실패 시 null)
+        function parseShortDate(value) {
+            const s = normalizeToShortDate(value);
+            const m = s.match(/^(\d{2})\.(\d{2})\.(\d{2})$/);
+            if (!m) return null;
+            return {
+                year: 2000 + parseInt(m[1], 10),
+                month: parseInt(m[2], 10),
+                day: parseInt(m[3], 10)
+            };
         }
 
         function addCategory() {
@@ -794,6 +1020,238 @@
             }
         }
 
+        // ===== 지난 기록(월별/기간별) =====
+
+        // 기간 라벨: "YY.MM.DD ~ YY.MM.DD" 형식
+        function formatPeriodLabel(startISO, endISO) {
+            const fmt = (iso) => formatShortDate(new Date(iso));
+            return `${fmt(startISO)} ~ ${fmt(endISO)}`;
+        }
+
+        function getHistoryCategoryExpenses(record, categoryId) {
+            return record.expenses
+                .filter(e => e.categoryId === categoryId)
+                .reduce((sum, e) => sum + e.amount, 0);
+        }
+
+        function renderHistoryList() {
+            const container = document.getElementById('historyList');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const history = budgetData.history || [];
+            if (history.length === 0) {
+                container.innerHTML = '<p class="empty-message">아직 저장된 지난 기록이 없습니다</p>';
+                return;
+            }
+
+            history.forEach(record => {
+                const total = record.expenses.reduce((sum, e) => sum + e.amount, 0);
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.onclick = () => openHistoryModal(record.id);
+                div.innerHTML = `
+                    <span class="history-period">${formatPeriodLabel(record.periodStart, record.periodEnd)}</span>
+                    <span class="history-total">총 ${total.toLocaleString('ko-KR')}원</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function openHistoryModal(recordId) {
+            const record = (budgetData.history || []).find(r => r.id === recordId);
+            if (!record) return;
+
+            const totalSpent = record.expenses.reduce((sum, e) => sum + e.amount, 0);
+            const remaining = (record.totalBudget || 0) - totalSpent;
+
+            document.getElementById('historyModalTitle').textContent =
+                formatPeriodLabel(record.periodStart, record.periodEnd);
+
+            document.getElementById('historyModalSummary').innerHTML = `
+                총 예산: ${(record.totalBudget || 0).toLocaleString('ko-KR')}원<br>
+                최종 사용금액: ${totalSpent.toLocaleString('ko-KR')}원<br>
+                남은액: <span style="color: ${remaining < 0 ? '#dc3545' : '#28a745'}; font-weight: 500;">${remaining.toLocaleString('ko-KR')}원</span>
+            `;
+
+            const breakdown = document.getElementById('historyCategoryBreakdown');
+            breakdown.innerHTML = '';
+
+            const categoryIds = Object.keys(record.categories || {});
+            if (categoryIds.length === 0) {
+                breakdown.innerHTML = '<p class="empty-message">저장된 카테고리 정보가 없습니다</p>';
+            } else {
+                categoryIds.forEach(categoryId => {
+                    const category = record.categories[categoryId];
+                    const spent = getHistoryCategoryExpenses(record, categoryId);
+
+                    const row = document.createElement('div');
+                    row.className = 'history-category-row';
+
+                    const expensesHtml = record.expenses
+                        .filter(e => e.categoryId === categoryId)
+                        .slice()
+                        .reverse()
+                        .map(e => `
+                            <div class="modal-expense-item">
+                                <div class="expense-info">
+                                    <p class="expense-note">${e.note || '-'}</p>
+                                    <p class="expense-date">${normalizeToShortDate(e.date)}</p>
+                                </div>
+                                <div class="expense-amount">${e.amount.toLocaleString('ko-KR')}원</div>
+                            </div>
+                        `).join('') || '<p class="empty-message">지출 내역이 없습니다</p>';
+
+                    row.innerHTML = `
+                        <div class="row-top">
+                            <span>${category.name}</span>
+                            <span>${spent.toLocaleString('ko-KR')}원 / 한도 ${(category.limit || 0).toLocaleString('ko-KR')}원</span>
+                        </div>
+                        <div class="history-category-expenses">${expensesHtml}</div>
+                    `;
+                    row.onclick = () => {
+                        row.querySelector('.history-category-expenses').classList.toggle('show');
+                    };
+                    breakdown.appendChild(row);
+                });
+            }
+
+            document.getElementById('historyModal').classList.add('show');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.remove('show');
+        }
+
+        function handleHistoryModalOverlayClick(event) {
+            if (event.target.id === 'historyModal') {
+                closeHistoryModal();
+            }
+        }
+
+        // ===== 캘린더 =====
+
+        // 현재 지출(current) + 지난 기록(history) 전체를 합친 지출 목록 (카테고리명 포함)
+        function getAllExpensesFlat() {
+            const list = [];
+            budgetData.expenses.forEach(e => {
+                const category = budgetData.categories[e.categoryId];
+                list.push({ ...e, categoryName: category ? category.name : '(삭제된 카테고리)' });
+            });
+            (budgetData.history || []).forEach(record => {
+                record.expenses.forEach(e => {
+                    const category = record.categories[e.categoryId];
+                    list.push({ ...e, categoryName: category ? category.name : '(삭제된 카테고리)' });
+                });
+            });
+            return list;
+        }
+
+        function changeCalendarMonth(delta) {
+            calendarViewMonth += delta;
+            if (calendarViewMonth < 0) {
+                calendarViewMonth = 11;
+                calendarViewYear -= 1;
+            } else if (calendarViewMonth > 11) {
+                calendarViewMonth = 0;
+                calendarViewYear += 1;
+            }
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const titleEl = document.getElementById('calendarTitle');
+            const gridEl = document.getElementById('calendarGrid');
+            if (!titleEl || !gridEl) return;
+
+            titleEl.textContent = `${calendarViewYear}년 ${calendarViewMonth + 1}월`;
+
+            // 요일 헤더
+            gridEl.innerHTML = '';
+            ['일', '월', '화', '수', '목', '금', '토'].forEach(d => {
+                const el = document.createElement('div');
+                el.className = 'calendar-dow';
+                el.textContent = d;
+                gridEl.appendChild(el);
+            });
+
+            const allExpenses = getAllExpensesFlat();
+            const dailyTotals = {}; // day -> total amount
+            allExpenses.forEach(e => {
+                const parsed = parseShortDate(e.date);
+                if (parsed && parsed.year === calendarViewYear && parsed.month === calendarViewMonth + 1) {
+                    dailyTotals[parsed.day] = (dailyTotals[parsed.day] || 0) + e.amount;
+                }
+            });
+
+            const firstDayOfWeek = new Date(calendarViewYear, calendarViewMonth, 1).getDay();
+            const daysInMonth = new Date(calendarViewYear, calendarViewMonth + 1, 0).getDate();
+            const today = new Date();
+            const isCurrentMonth = today.getFullYear() === calendarViewYear && today.getMonth() === calendarViewMonth;
+
+            for (let i = 0; i < firstDayOfWeek; i++) {
+                const el = document.createElement('div');
+                el.className = 'calendar-cell empty';
+                gridEl.appendChild(el);
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const amount = dailyTotals[day] || 0;
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell' + (amount > 0 ? ' has-expense' : '') + (isCurrentMonth && today.getDate() === day ? ' today' : '');
+                cell.innerHTML = `
+                    <span class="calendar-day-num">${day}</span>
+                    ${amount > 0 ? `<span class="calendar-day-amount">${amount.toLocaleString('ko-KR')}원</span>` : ''}
+                `;
+                if (amount > 0) {
+                    cell.onclick = () => openDayModal(calendarViewYear, calendarViewMonth + 1, day);
+                }
+                gridEl.appendChild(cell);
+            }
+        }
+
+        function openDayModal(year, month, day) {
+            const allExpenses = getAllExpensesFlat();
+            const items = allExpenses.filter(e => {
+                const parsed = parseShortDate(e.date);
+                return parsed && parsed.year === year && parsed.month === month && parsed.day === day;
+            });
+
+            const total = items.reduce((sum, e) => sum + e.amount, 0);
+
+            document.getElementById('dayModalTitle').textContent =
+                `${year}년 ${month}월 ${day}일`;
+            document.getElementById('dayModalSummary').innerHTML =
+                `이 날 총 지출: ${total.toLocaleString('ko-KR')}원`;
+
+            const list = document.getElementById('dayModalExpenseList');
+            if (items.length === 0) {
+                list.innerHTML = '<p class="empty-message">지출 내역이 없습니다</p>';
+            } else {
+                list.innerHTML = items.map(e => `
+                    <div class="modal-expense-item">
+                        <div class="expense-info">
+                            <p class="expense-category">${e.categoryName}</p>
+                            <p class="expense-note">${e.note || '-'}</p>
+                        </div>
+                        <div class="expense-amount">${e.amount.toLocaleString('ko-KR')}원</div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('dayModal').classList.add('show');
+        }
+
+        function closeDayModal() {
+            document.getElementById('dayModal').classList.remove('show');
+        }
+
+        function handleDayModalOverlayClick(event) {
+            if (event.target.id === 'dayModal') {
+                closeDayModal();
+            }
+        }
+
         function updateTotalBudget() {
             const value = parseInt(document.getElementById('totalBudget').value) || 0;
             budgetData.totalBudget = value;
@@ -827,6 +1285,8 @@
 
         function render() {
             renderPeriodInfo();
+            renderCalendar();
+            renderHistoryList();
 
             document.getElementById('totalBudget').value = budgetData.totalBudget || '';
             document.getElementById('totalBudgetDisplay').textContent = 
@@ -903,7 +1363,11 @@
 
         // ESC 키로 팝업 닫기
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeCategoryModal();
+            if (e.key === 'Escape') {
+                closeCategoryModal();
+                closeHistoryModal();
+                closeDayModal();
+            }
         });
 
         initializeFromLocalStorage();
