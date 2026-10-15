@@ -181,6 +181,48 @@
             background: #f5f5f5;
             cursor: not-allowed;
         }
+
+        /* ===== 카테고리 드래그 앤 드롭 ===== */
+        .drag-handle {
+            flex: 0 0 auto;
+            width: 26px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #bbb;
+            font-size: 15px;
+            line-height: 1;
+            cursor: grab;
+            border-radius: 6px;
+            user-select: none;
+            touch-action: none;   /* 모바일에서 드래그 중 화면 스크롤 방지 */
+        }
+
+        .drag-handle:hover {
+            background: #ececec;
+            color: #777;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .category-item {
+            background: transparent;
+            border-radius: 8px;
+            transition: background 0.15s, box-shadow 0.15s, opacity 0.15s;
+        }
+
+        .category-item.dragging {
+            background: #fff;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+            opacity: 0.95;
+        }
+
+        .category-item.dragging .drag-handle {
+            color: #007bff;
+        }
         
         .category-breakdown {
             padding: 12px;
@@ -357,6 +399,7 @@
         
         .expense-info {
             flex: 1;
+            min-width: 0;
         }
         
         .expense-category {
@@ -377,6 +420,45 @@
             color: #999;
             margin: 2px 0 0 0;
         }
+
+        /* ===== 지출 내역 인라인 수정용 입력 ===== */
+        .expense-edit-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .expense-category-select {
+            font-size: 12px;
+            color: #333;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 4px 6px;
+            margin: 0;
+            background: #fff;
+            flex: 0 0 auto;
+            max-width: 46%;
+        }
+
+        .expense-note-input {
+            font-size: 12px;
+            color: #333;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 4px 6px;
+            margin: 0;
+            background: #fff;
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .expense-category-select:focus,
+        .expense-note-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+        }
         
         .expense-date-input {
             font-size: 11px;
@@ -384,7 +466,7 @@
             border: 1px solid #e0e0e0;
             border-radius: 6px;
             padding: 3px 6px;
-            margin: 4px 0 0 0;
+            margin: 0;
             width: 100px;
             background: #fff;
         }
@@ -400,6 +482,40 @@
             font-weight: 500;
             color: #333;
             margin: 0 12px 0 0;
+            white-space: nowrap;
+        }
+
+        /* 지출 금액 인라인 수정용 입력 */
+        .expense-amount-box {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            margin: 0 10px 0 0;
+            flex: 0 0 auto;
+        }
+
+        .expense-amount-input {
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+            text-align: right;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 4px 6px;
+            margin: 0;
+            width: 92px;
+            background: #fff;
+        }
+
+        .expense-amount-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+        }
+
+        .expense-amount-unit {
+            font-size: 12px;
+            color: #666;
         }
         
         .empty-message {
@@ -408,8 +524,7 @@
             text-align: center;
             padding: 20px;
         }
-
-        /* ===== 지난 기록(월별/기간별) ===== */
+                /* ===== 지난 기록(월별/기간별) ===== */
         .history-item {
             padding: 12px;
             background: #f9f9f9;
@@ -658,6 +773,7 @@
                 
                 <div style="background: #f5f5f5; border-radius: 8px; padding: 1rem; margin-top: 1rem;">
                     <h3>항목별 예산 한도</h3>
+                    <p style="font-size: 12px; color: #888; margin: -6px 0 12px 0;">카테고리 이름을 직접 수정할 수 있고, 왼쪽 손잡이(⠿)를 끌어서 순서를 바꿀 수 있어요.</p>
                     <div id="categoryLimits"></div>
                     <button class="secondary" onclick="addCategory()">+ 카테고리 추가</button>
                 </div>
@@ -709,6 +825,7 @@
                     <h2>지출 내역</h2>
                     <button class="toggle-btn" id="expenseListToggleBtn" onclick="toggleExpenseList()">펼치기 ▾</button>
                 </div>
+                <p style="font-size: 12px; color: #888; margin: -6px 0 12px 0;">카테고리·설명·금액·날짜를 직접 수정할 수 있어요.</p>
                 <div id="expenseListWrapper">
                     <div id="expenseList"></div>
                 </div>
@@ -747,6 +864,7 @@
                 <button class="modal-close" onclick="closeCategoryModal()">✕</button>
             </div>
             <div id="modalSummary" class="modal-summary"></div>
+            <p style="font-size: 12px; color: #888; margin: -6px 0 12px 0;">설명·금액·날짜를 직접 수정할 수 있어요.</p>
             <div id="modalExpenseList"></div>
         </div>
     </div>
@@ -776,8 +894,7 @@
             <div id="dayModalExpenseList"></div>
         </div>
     </div>
-
-    <script>
+        <script>
         let budgetData = {
             totalBudget: 0,
             categories: {},
@@ -793,6 +910,9 @@
 
         // 지출 내역 토글 펼침 여부 (기본: 접힘)
         let expenseListVisible = false;
+
+        // 현재 열려 있는 항목별 지출 팝업의 카테고리 ID (수정 후 즉시 갱신용)
+        let openCategoryModalId = null;
 
         // ===== 탭 전환 =====
         function switchTab(tabName) {
@@ -815,6 +935,111 @@
             btn.textContent = expenseListVisible ? '접기 ▴' : '펼치기 ▾';
         }
 
+        // ===== HTML 이스케이프 (이름/설명에 따옴표·꺾쇠가 들어가도 깨지지 않도록) =====
+        function escapeHtml(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // ===== 카테고리 순서 =====
+        // 각 카테고리에 order 값을 부여해 사용자가 지정한 순서대로 표시
+        function migrateCategoryOrder() {
+            const entries = Object.entries(budgetData.categories);
+            let needSave = false;
+            entries.forEach(([id, category], index) => {
+                if (typeof category.order !== 'number') {
+                    category.order = index;   // 기존 데이터: 저장된 순서를 그대로 초기 순서로 사용
+                    needSave = true;
+                }
+            });
+            if (needSave) saveToLocalStorage();
+        }
+
+        // order 기준으로 정렬된 [id, category] 목록 반환
+        function getSortedCategoryEntries() {
+            return Object.entries(budgetData.categories)
+                .sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0));
+        }
+
+        // ===== 카테고리 드래그 앤 드롭 정렬 =====
+        // Pointer Event 기반으로 구현해 마우스와 터치(모바일)를 모두 지원
+        let categoryDrag = null;
+
+        function startCategoryDrag(event, itemEl) {
+            if (event.button !== undefined && event.button !== 0) return; // 좌클릭/터치만
+            event.preventDefault();
+
+            const container = document.getElementById('categoryLimits');
+            categoryDrag = { itemEl, container, pointerId: event.pointerId };
+            itemEl.classList.add('dragging');
+
+            document.addEventListener('pointermove', onCategoryDragMove, { passive: false });
+            document.addEventListener('pointerup', endCategoryDrag);
+            document.addEventListener('pointercancel', endCategoryDrag);
+        }
+
+        function onCategoryDragMove(event) {
+            if (!categoryDrag) return;
+            event.preventDefault();
+
+            const { container, itemEl } = categoryDrag;
+            const siblings = Array.from(container.querySelectorAll('.category-item'))
+                .filter(el => el !== itemEl);
+
+            // 포인터 위치보다 아래에 있는 첫 항목 앞으로 이동, 없으면 맨 뒤로
+            let inserted = false;
+            for (const sib of siblings) {
+                const rect = sib.getBoundingClientRect();
+                if (event.clientY < rect.top + rect.height / 2) {
+                    container.insertBefore(itemEl, sib);
+                    inserted = true;
+                    break;
+                }
+            }
+            if (!inserted) container.appendChild(itemEl);
+        }
+
+        function endCategoryDrag() {
+            if (!categoryDrag) return;
+            const { container, itemEl } = categoryDrag;
+
+            itemEl.classList.remove('dragging');
+            document.removeEventListener('pointermove', onCategoryDragMove);
+            document.removeEventListener('pointerup', endCategoryDrag);
+            document.removeEventListener('pointercancel', endCategoryDrag);
+            categoryDrag = null;
+
+            // 현재 DOM 순서를 order 값으로 확정 저장
+            Array.from(container.querySelectorAll('.category-item')).forEach((el, i) => {
+                const id = el.dataset.categoryId;
+                if (budgetData.categories[id]) budgetData.categories[id].order = i;
+            });
+
+            saveToLocalStorage();
+            renderCategories();
+            updateExpenseCategorySelect();
+            render();
+        }
+
+        // 카테고리 이름 수정
+        function updateCategoryName(categoryId, value) {
+            const name = String(value || '').trim();
+            if (!name) {
+                alert('카테고리 이름은 비워둘 수 없습니다');
+                renderCategories();
+                return;
+            }
+            budgetData.categories[categoryId].name = name;
+            saveToLocalStorage();
+            renderCategories();
+            updateExpenseCategorySelect();
+            render();
+        }
+
         function initializeFromLocalStorage() {
             const saved = localStorage.getItem('budgetData');
             if (saved) {
@@ -824,6 +1049,8 @@
             if (!budgetData.history) {
                 budgetData.history = [];
             }
+            // 기존 버전 데이터 호환: 카테고리 order 필드 부여
+            migrateCategoryOrder();
             // 저장된 데이터를 불러온 뒤, 초기화 기준일이 지났는지 확인하고 필요하면 초기화
             checkAndResetMonthly();
             renderResetDaySelect();
@@ -975,11 +1202,13 @@
                 const categoryId = Date.now().toString();
                 budgetData.categories[categoryId] = {
                     name: name.trim(),
-                    limit: 0
+                    limit: 0,
+                    order: Object.keys(budgetData.categories).length   // 새 카테고리는 맨 아래에 추가
                 };
                 saveToLocalStorage();
                 renderCategories();
                 updateExpenseCategorySelect();
+                render();
             }
         }
 
@@ -987,6 +1216,8 @@
             if (confirm('이 카테고리를 삭제하시겠습니까?')) {
                 delete budgetData.categories[categoryId];
                 budgetData.expenses = budgetData.expenses.filter(e => e.categoryId !== categoryId);
+                // 남은 카테고리의 order를 0부터 다시 매김
+                getSortedCategoryEntries().forEach(([id], i) => { budgetData.categories[id].order = i; });
                 saveToLocalStorage();
                 renderCategories();
                 updateExpenseCategorySelect();
@@ -1003,15 +1234,21 @@
         function renderCategories() {
             const container = document.getElementById('categoryLimits');
             container.innerHTML = '';
-            
-            Object.entries(budgetData.categories).forEach(([id, category]) => {
+
+            const sorted = getSortedCategoryEntries();
+
+            sorted.forEach(([id, category]) => {
                 const div = document.createElement('div');
                 div.className = 'category-item';
+                div.dataset.categoryId = id;   // 드래그 종료 후 순서 확정에 사용
                 div.innerHTML = `
-                    <input type="text" value="${category.name}" disabled style="flex: 1;">
+                    <span class="drag-handle" title="끌어서 순서 변경">⠿</span>
+                    <input type="text" value="${escapeHtml(category.name)}" onchange="updateCategoryName('${id}', this.value)" placeholder="카테고리 이름" style="flex: 1; min-width: 0;">
                     <input type="number" value="${category.limit}" onchange="updateCategoryLimit('${id}', this.value)" placeholder="한도" style="width: 100px;">
                     <button class="danger" onclick="deleteCategory('${id}')">삭제</button>
                 `;
+                div.querySelector('.drag-handle')
+                   .addEventListener('pointerdown', (e) => startCategoryDrag(e, div));
                 container.appendChild(div);
             });
         }
@@ -1020,15 +1257,23 @@
             const select = document.getElementById('expenseCategory');
             const currentValue = select.value;
             select.innerHTML = '<option value="">카테고리 선택</option>';
-            
-            Object.entries(budgetData.categories).forEach(([id, category]) => {
+
+            getSortedCategoryEntries().forEach(([id, category]) => {
                 const option = document.createElement('option');
                 option.value = id;
                 option.textContent = category.name;
                 select.appendChild(option);
             });
-            
+
             select.value = currentValue;
+        }
+
+        // 지출 내역에서 카테고리를 바꿀 수 있는 <select> HTML 생성
+        function buildCategorySelectHtml(expenseId, selectedCategoryId) {
+            const options = getSortedCategoryEntries().map(([id, category]) =>
+                `<option value="${id}" ${id === selectedCategoryId ? 'selected' : ''}>${escapeHtml(category.name)}</option>`
+            ).join('');
+            return `<select class="expense-category-select" onchange="updateExpenseCategory('${expenseId}', this.value)">${options}</select>`;
         }
 
         function addExpense() {
@@ -1087,8 +1332,51 @@
             render();
         }
 
+        // 지출 항목의 설명을 사용자가 직접 수정
+        function updateExpenseNote(expenseId, value) {
+            const expense = budgetData.expenses.find(e => e.id === expenseId);
+            if (!expense) return;
+            expense.note = String(value || '').trim();
+            saveToLocalStorage();
+            render();
+        }
+
+        // 지출 항목의 금액을 사용자가 직접 수정
+        function updateExpenseAmount(expenseId, value) {
+            const expense = budgetData.expenses.find(e => e.id === expenseId);
+            if (!expense) return;
+            const amount = parseInt(value);
+            if (isNaN(amount) || amount <= 0) {
+                alert('금액은 0보다 큰 숫자로 입력해주세요');
+                render(); // 잘못된 입력이면 원래 값으로 되돌림
+                return;
+            }
+            expense.amount = amount;
+            saveToLocalStorage();
+            render();
+        }
+
+        // 지출 항목의 카테고리를 사용자가 직접 변경
+        function updateExpenseCategory(expenseId, categoryId) {
+            const expense = budgetData.expenses.find(e => e.id === expenseId);
+            if (!expense || !budgetData.categories[categoryId]) return;
+            expense.categoryId = categoryId;
+            saveToLocalStorage();
+            render();
+        }
+
         // ===== 항목별 지출 내역 팝업 =====
         function openCategoryModal(categoryId) {
+            const category = budgetData.categories[categoryId];
+            if (!category) return;
+
+            openCategoryModalId = categoryId;
+            renderCategoryModalContents(categoryId);
+            document.getElementById('categoryModal').classList.add('show');
+        }
+
+        // 팝업 내용만 다시 그리기 (수정 후 즉시 반영용)
+        function renderCategoryModalContents(categoryId) {
             const category = budgetData.categories[categoryId];
             if (!category) return;
 
@@ -1116,19 +1404,23 @@
                     div.className = 'modal-expense-item';
                     div.innerHTML = `
                         <div class="expense-info">
-                            <p class="expense-note">${expense.note || '-'}</p>
-                            <p class="expense-date">${normalizeToShortDate(expense.date)}</p>
+                            <div class="expense-edit-row">
+                                <input type="text" class="expense-note-input" value="${escapeHtml(expense.note)}" onchange="updateExpenseNote('${expense.id}', this.value)" placeholder="설명">
+                            </div>
+                            <input type="text" class="expense-date-input" value="${normalizeToShortDate(expense.date)}" onchange="updateExpenseDate('${expense.id}', this.value)" placeholder="YY.MM.DD">
                         </div>
-                        <div class="expense-amount">${expense.amount.toLocaleString('ko-KR')}원</div>
+                        <div class="expense-amount-box">
+                            <input type="number" class="expense-amount-input" value="${expense.amount}" onchange="updateExpenseAmount('${expense.id}', this.value)">
+                            <span class="expense-amount-unit">원</span>
+                        </div>
                     `;
                     list.appendChild(div);
                 });
             }
-
-            document.getElementById('categoryModal').classList.add('show');
         }
 
         function closeCategoryModal() {
+            openCategoryModalId = null;
             document.getElementById('categoryModal').classList.remove('show');
         }
 
@@ -1196,7 +1488,11 @@
             const breakdown = document.getElementById('historyCategoryBreakdown');
             breakdown.innerHTML = '';
 
-            const categoryIds = Object.keys(record.categories || {});
+            // 스냅샷에 저장된 order가 있으면 그 순서대로 표시
+            const categoryIds = Object.entries(record.categories || {})
+                .sort((a, b) => (a[1].order ?? 0) - (b[1].order ?? 0))
+                .map(([id]) => id);
+
             if (categoryIds.length === 0) {
                 breakdown.innerHTML = '<p class="empty-message">저장된 카테고리 정보가 없습니다</p>';
             } else {
@@ -1214,7 +1510,7 @@
                         .map(e => `
                             <div class="modal-expense-item">
                                 <div class="expense-info">
-                                    <p class="expense-note">${e.note || '-'}</p>
+                                    <p class="expense-note">${escapeHtml(e.note) || '-'}</p>
                                     <p class="expense-date">${normalizeToShortDate(e.date)}</p>
                                 </div>
                                 <div class="expense-amount">${e.amount.toLocaleString('ko-KR')}원</div>
@@ -1223,7 +1519,7 @@
 
                     row.innerHTML = `
                         <div class="row-top">
-                            <span>${category.name}</span>
+                            <span>${escapeHtml(category.name)}</span>
                             <span>${spent.toLocaleString('ko-KR')}원 / 한도 ${(category.limit || 0).toLocaleString('ko-KR')}원</span>
                         </div>
                         <div class="history-category-expenses">${expensesHtml}</div>
@@ -1350,8 +1646,8 @@
                 list.innerHTML = items.map(e => `
                     <div class="modal-expense-item">
                         <div class="expense-info">
-                            <p class="expense-category">${e.categoryName}</p>
-                            <p class="expense-note">${e.note || '-'}</p>
+                            <p class="expense-category">${escapeHtml(e.categoryName)}</p>
+                            <p class="expense-note">${escapeHtml(e.note) || '-'}</p>
                         </div>
                         <div class="expense-amount">${e.amount.toLocaleString('ko-KR')}원</div>
                     </div>
@@ -1422,8 +1718,8 @@
 
             const breakdown = document.getElementById('categoryBreakdown');
             breakdown.innerHTML = '';
-            
-            Object.entries(budgetData.categories).forEach(([id, category]) => {
+
+            getSortedCategoryEntries().forEach(([id, category]) => {
                 const spent = getCategoryExpenses(id);
                 const limit = category.limit || 0;
                 const categoryRemaining = limit - spent;
@@ -1437,7 +1733,7 @@
                 
                 div.innerHTML = `
                     <div class="category-header">
-                        <span class="category-name">${category.name}</span>
+                        <span class="category-name">${escapeHtml(category.name)}</span>
                         <div class="category-stats">
                             <p>지출: ${spent.toLocaleString('ko-KR')}원</p>
                             <p class="remaining ${isOverBudget ? 'over' : ''}">남은액: ${categoryRemaining.toLocaleString('ko-KR')}원</p>
@@ -1461,21 +1757,34 @@
             } else {
                 expenseList.innerHTML = '';
                 budgetData.expenses.slice().reverse().forEach(expense => {
-                    const category = budgetData.categories[expense.categoryId];
                     const div = document.createElement('div');
                     div.className = 'expense-item';
-                    
+
                     div.innerHTML = `
                         <div class="expense-info">
-                            <p class="expense-category">${category.name}</p>
-                            <p class="expense-note">${expense.note || '-'}</p>
+                            <div class="expense-edit-row">
+                                ${buildCategorySelectHtml(expense.id, expense.categoryId)}
+                                <input type="text" class="expense-note-input" value="${escapeHtml(expense.note)}" onchange="updateExpenseNote('${expense.id}', this.value)" placeholder="설명">
+                            </div>
                             <input type="text" class="expense-date-input" value="${normalizeToShortDate(expense.date)}" onchange="updateExpenseDate('${expense.id}', this.value)" placeholder="YY.MM.DD">
                         </div>
-                        <div class="expense-amount">${expense.amount.toLocaleString('ko-KR')}원</div>
+                        <div class="expense-amount-box">
+                            <input type="number" class="expense-amount-input" value="${expense.amount}" onchange="updateExpenseAmount('${expense.id}', this.value)">
+                            <span class="expense-amount-unit">원</span>
+                        </div>
                         <button class="danger" onclick="deleteExpense('${expense.id}')">삭제</button>
                     `;
                     expenseList.appendChild(div);
                 });
+            }
+
+            // 항목별 팝업이 열려 있으면 내용도 함께 갱신
+            if (openCategoryModalId) {
+                if (budgetData.categories[openCategoryModalId]) {
+                    renderCategoryModalContents(openCategoryModalId);
+                } else {
+                    closeCategoryModal();
+                }
             }
         }
 
